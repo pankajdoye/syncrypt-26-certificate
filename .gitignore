@@ -30,4 +30,5 @@ Thumbs.db
 !backend/certificate/certificate-template.png
 !backend/assets/cryptx-logo.png
 !frontend/public/cryptx-logo.png
+!frontend/public/certificate-template.png
 !frontend/src/assets/cryptx-logo.png

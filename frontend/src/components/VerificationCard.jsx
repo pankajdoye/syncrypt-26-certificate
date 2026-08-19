@@ -114,19 +114,48 @@ export default function VerificationCard({ onVerify, onDownload, loading, downlo
               <h3 className="text-2xl font-black text-emerald-700 tracking-tight flex items-center justify-center gap-2">
                 <span>✓ Certificate Verified</span>
               </h3>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mt-4">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mt-2">
                 Participant Name
               </p>
-              <div className="text-2xl sm:text-3xl font-extrabold text-navy-900 mt-1 bg-slate-50 py-2.5 px-4 rounded-xl border border-slate-200/80 inline-block max-w-full truncate">
+              <div className="text-xl sm:text-2xl font-extrabold text-navy-900 mt-1 bg-slate-50 py-2 px-4 rounded-xl border border-slate-200/80 inline-block max-w-full truncate">
                 {result.name}
               </div>
             </div>
 
-            <p className="text-sm font-medium text-slate-600">
-              Your SYNCRYPT’26 participation certificate is ready.
+            {/* Visual Certificate Preview Card */}
+            <div className="space-y-2 text-left">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-500 px-1">
+                <span>Official Certificate Preview</span>
+                <span className="text-emerald-600 font-mono">SYNCRYPT’26</span>
+              </div>
+              
+              <div className="relative w-full rounded-xl overflow-hidden shadow-md border border-slate-300 bg-slate-900 group">
+                <img
+                  src="/certificate-template.png"
+                  alt="SYNCRYPT'26 New Certificate Template Preview"
+                  className="w-full h-auto block select-none object-cover"
+                />
+                {/* Dynamic Name Overlay onto Preview */}
+                <div 
+                  className="absolute pointer-events-none text-left truncate font-bold text-[#D4AF37] font-sans drop-shadow-sm"
+                  style={{
+                    left: '31.8%',
+                    top: '57.8%',
+                    maxWidth: '43%',
+                    fontSize: result.name.length > 25 ? 'clamp(7px, 1.8vw, 13px)' : 'clamp(9px, 2.2vw, 16px)',
+                    lineHeight: '1',
+                  }}
+                >
+                  {result.name}
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs font-medium text-slate-600">
+              Your official SYNCRYPT’26 participation certificate is ready for download.
             </p>
 
-            <div className="pt-2 space-y-3">
+            <div className="pt-1 space-y-3">
               <button
                 onClick={() => onDownload(result.prn)}
                 disabled={downloading}

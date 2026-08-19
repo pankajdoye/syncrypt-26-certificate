@@ -9,7 +9,8 @@ const __dirname = path.dirname(__filename);
 const possibleImagePaths = [
   path.join(process.cwd(), 'backend/certificate/certificate-template.png'),
   path.join(__dirname, '../certificate/certificate-template.png'),
-  path.join(__dirname, '../../backend/certificate/certificate-template.png')
+  path.join(process.cwd(), 'SYNCRYPT26_Certificate (1).pdf (1).png'),
+  path.join(__dirname, '../../SYNCRYPT26_Certificate (1).pdf (1).png')
 ];
 
 /**
