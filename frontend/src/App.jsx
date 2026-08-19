@@ -5,15 +5,20 @@ import Hero from './components/Hero.jsx';
 import VerificationCard from './components/VerificationCard.jsx';
 import CyberBackground from './components/CyberBackground.jsx';
 import Footer from './components/Footer.jsx';
+import certificateTemplateImg from './assets/certificate-template.png';
 
 // Base API URL: Uses VITE_API_URL if configured (e.g. Render backend URL), or relative path /api
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
 /**
- * Generate certificate PDF on client side using current dashboard template (/certificate-template.png)
+ * Generate certificate PDF on client side using imported template asset
  */
 async function generateClientCertificatePDF(participantName) {
-  const imgResponse = await fetch(`/certificate-template.png?v=${Date.now()}`, { cache: 'no-store' });
+  let imgResponse = await fetch(certificateTemplateImg);
+  const contentType = imgResponse.headers.get('content-type') || '';
+  if (!imgResponse.ok || contentType.includes('html')) {
+    imgResponse = await fetch(`/certificate-template.png?v=${Date.now()}`, { cache: 'no-store' });
+  }
   if (!imgResponse.ok) {
     throw new Error('Failed to load certificate template image');
   }

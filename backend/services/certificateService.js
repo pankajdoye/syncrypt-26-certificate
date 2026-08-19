@@ -11,6 +11,8 @@ const possibleImagePaths = [
   path.join(process.cwd(), 'backend/certificate/certificate-template.png'),
   path.join(__dirname, '../../frontend/public/certificate-template.png'),
   path.join(process.cwd(), 'frontend/public/certificate-template.png'),
+  path.join(__dirname, '../../frontend/src/assets/certificate-template.png'),
+  path.join(process.cwd(), 'frontend/src/assets/certificate-template.png'),
   path.join(process.cwd(), 'SYNCRYPT26_Certificate (1).pdf (1).png'),
 ];
 
