@@ -157,7 +157,7 @@ export default function VerificationCard({ onVerify, onDownload, loading, downlo
 
             <div className="pt-1 space-y-3">
               <button
-                onClick={() => onDownload(result.prn)}
+                onClick={() => onDownload(result.prn, result.name)}
                 disabled={downloading}
                 className="w-full py-4 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer disabled:opacity-75"
               >

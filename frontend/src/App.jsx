@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import Header from './components/Header.jsx';
 import Hero from './components/Hero.jsx';
 import VerificationCard from './components/VerificationCard.jsx';
@@ -7,6 +8,58 @@ import Footer from './components/Footer.jsx';
 
 // Base API URL: Uses VITE_API_URL if configured (e.g. Render backend URL), or relative path /api
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
+/**
+ * Generate certificate PDF on client side using current dashboard template (/certificate-template.png)
+ */
+async function generateClientCertificatePDF(participantName) {
+  const imgResponse = await fetch('/certificate-template.png');
+  if (!imgResponse.ok) {
+    throw new Error('Failed to load certificate template image');
+  }
+  const imageBytes = await imgResponse.arrayBuffer();
+
+  const pdfDoc = await PDFDocument.create();
+  const pageWidth = 842.88;
+  const pageHeight = 595.92;
+  const page = pdfDoc.addPage([pageWidth, pageHeight]);
+
+  const embeddedImage = await pdfDoc.embedPng(imageBytes);
+
+  page.drawImage(embeddedImage, {
+    x: 0,
+    y: 0,
+    width: pageWidth,
+    height: pageHeight,
+  });
+
+  const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  const startX = 268;
+  const baselineY = 240;
+  const maxAvailableWidth = 370;
+
+  let fontSize = 22;
+  let textWidth = font.widthOfTextAtSize(participantName, fontSize);
+
+  if (textWidth > maxAvailableWidth) {
+    fontSize = Math.floor(fontSize * (maxAvailableWidth / textWidth));
+    if (fontSize < 12) fontSize = 12;
+  }
+
+  const goldColor = rgb(212 / 255, 175 / 255, 55 / 255);
+
+  page.drawText(participantName, {
+    x: startX,
+    y: baselineY,
+    size: fontSize,
+    font: font,
+    color: goldColor,
+  });
+
+  const pdfBytes = await pdfDoc.save();
+  return new Blob([pdfBytes], { type: 'application/pdf' });
+}
 
 export default function App() {
   const [loading, setLoading] = useState(false);
@@ -57,9 +110,13 @@ export default function App() {
   /**
    * Handle Certificate PDF Download
    */
-  const handleDownloadPDF = async (prn) => {
+  const handleDownloadPDF = async (prn, participantName) => {
     if (!prn) return;
     setDownloading(true);
+
+    const nameToUse = participantName || result?.name || 'Participant';
+    let pdfBlob = null;
+    let filename = `SYNCRYPT_26_Certificate_${nameToUse.trim().replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
 
     try {
       const response = await fetch(`${API_BASE}/api/certificate/download`, {
@@ -70,22 +127,32 @@ export default function App() {
         body: JSON.stringify({ prn }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to generate PDF');
-      }
-
-      const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = `SYNCRYPT_26_Certificate_${prn}.pdf`;
-      
-      if (contentDisposition) {
-        const match = contentDisposition.match(/filename="?([^"]+)"?/);
-        if (match && match[1]) {
-          filename = match[1];
+      if (response.ok) {
+        const contentDisposition = response.headers.get('Content-Disposition');
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename="?([^"]+)"?/);
+          if (match && match[1]) {
+            filename = match[1];
+          }
         }
+        pdfBlob = await response.blob();
+      } else {
+        throw new Error(`Server returned status ${response.status}`);
       }
+    } catch (apiError) {
+      console.warn('Backend download call failed or returned error, using client PDF generator:', apiError);
+      try {
+        pdfBlob = await generateClientCertificatePDF(nameToUse);
+      } catch (clientError) {
+        console.error('Client PDF generation error:', clientError);
+        alert('Failed to generate certificate PDF. Please try again.');
+        setDownloading(false);
+        return;
+      }
+    }
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+    if (pdfBlob) {
+      const url = window.URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
@@ -93,13 +160,8 @@ export default function App() {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-
-    } catch (error) {
-      console.error('PDF Download Error:', error);
-      alert('Failed to download certificate. Please try again.');
-    } finally {
-      setDownloading(false);
     }
+    setDownloading(false);
   };
 
   const handleReset = () => {
