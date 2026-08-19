@@ -7,7 +7,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Robust path resolution for local dev & Vercel serverless function execution
-const possiblePaths = [
+const possibleJsonPaths = [
+  path.join(process.cwd(), 'backend/data/participants.json'),
+  path.join(process.cwd(), 'data/participants.json'),
+  path.join(__dirname, '../data/participants.json'),
+  path.join(__dirname, '../../backend/data/participants.json'),
+  path.join(__dirname, '../../../backend/data/participants.json')
+];
+
+const possibleExcelPaths = [
   path.join(process.cwd(), 'backend/data/participants.xlsx'),
   path.join(process.cwd(), 'data/participants.xlsx'),
   path.join(__dirname, '../data/participants.xlsx'),
@@ -16,8 +24,6 @@ const possiblePaths = [
   path.join(process.cwd(), 'SYNCRYPT ’26 — Registration Form  (Responses) (2).xlsx'),
   path.join(__dirname, '../SYNCRYPT ’26 — Registration Form  (Responses) (2).xlsx')
 ];
-
-let EXCEL_PATH = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
 
 // Map to store normalized PRN / email -> Participant details
 let participantMap = new Map();
@@ -43,25 +49,41 @@ export function normalizeName(rawName) {
 }
 
 /**
- * Loads Excel file into memory
+ * Loads participant data into memory
  */
 export function loadParticipantData() {
   try {
     participantMap.clear();
-    
-    // Re-check path in case of serverless cold start
-    const found = possiblePaths.find(p => fs.existsSync(p));
-    if (found) EXCEL_PATH = found;
+    let rows = [];
+    let loadedFrom = '';
 
-    if (!fs.existsSync(EXCEL_PATH)) {
-      console.error('[ExcelService] Excel file not found at:', EXCEL_PATH);
-      return;
+    // 1. Try reading participants.json from filesystem
+    const jsonPath = possibleJsonPaths.find(p => fs.existsSync(p));
+    if (jsonPath) {
+      try {
+        const jsonRaw = fs.readFileSync(jsonPath, 'utf8');
+        rows = JSON.parse(jsonRaw);
+        loadedFrom = jsonPath;
+      } catch (err) {
+        console.warn('[ExcelService] Failed to parse JSON from path:', jsonPath, err);
+      }
     }
 
-    const workbook = xlsx.readFile(EXCEL_PATH);
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-    const rows = xlsx.utils.sheet_to_json(sheet);
+    // 2. If JSON not loaded, try reading participants.xlsx
+    if (rows.length === 0) {
+      const excelPath = possibleExcelPaths.find(p => fs.existsSync(p));
+      if (excelPath) {
+        try {
+          const workbook = xlsx.readFile(excelPath);
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          rows = xlsx.utils.sheet_to_json(sheet);
+          loadedFrom = excelPath;
+        } catch (err) {
+          console.warn('[ExcelService] Failed to read Excel from path:', excelPath, err);
+        }
+      }
+    }
 
     rows.forEach(row => {
       const prnKey = Object.keys(row).find(k => /prn|roll/i.test(k));
@@ -82,6 +104,12 @@ export function loadParticipantData() {
           participantMap.set(normalizedPRN, participantObj);
           participantMap.set(normalizedPRN.toLowerCase(), participantObj);
 
+          // Support lookup without leading zeros
+          const prnWithoutLeadingZeros = normalizedPRN.replace(/^0+/, '');
+          if (prnWithoutLeadingZeros && prnWithoutLeadingZeros !== normalizedPRN) {
+            participantMap.set(prnWithoutLeadingZeros, participantObj);
+          }
+
           // Support email lookups or PRN with email domain (e.g. 2403120@ritindia.edu)
           if (participantObj.email) {
             const cleanEmail = String(participantObj.email).trim().toLowerCase();
@@ -97,9 +125,9 @@ export function loadParticipantData() {
       }
     });
 
-    console.log(`[ExcelService] Loaded participant map with ${participantMap.size} keys from ${EXCEL_PATH}.`);
+    console.log(`[ExcelService] Loaded ${participantMap.size} lookup keys from ${rows.length} participants (${loadedFrom || 'none'}).`);
   } catch (error) {
-    console.error('[ExcelService] Error loading Excel file:', error);
+    console.error('[ExcelService] Error loading participant data:', error);
   }
 }
 
@@ -119,6 +147,13 @@ export function getParticipantByPRN(rawPRN) {
   // Direct lookup
   let found = participantMap.get(cleanPRN) || participantMap.get(cleanPRN.toLowerCase());
   if (found) return found;
+
+  // Try without leading zeros
+  const withoutZeros = cleanPRN.replace(/^0+/, '');
+  if (withoutZeros) {
+    found = participantMap.get(withoutZeros);
+    if (found) return found;
+  }
 
   // Fallback: If user entered email or PRN@domain, check prefix
   if (cleanPRN.includes('@')) {
