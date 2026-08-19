@@ -9,13 +9,17 @@ const __dirname = path.dirname(__filename);
 // Robust path resolution for local dev & Vercel serverless function execution
 const possiblePaths = [
   path.join(process.cwd(), 'backend/data/participants.xlsx'),
+  path.join(process.cwd(), 'data/participants.xlsx'),
   path.join(__dirname, '../data/participants.xlsx'),
-  path.join(__dirname, '../../backend/data/participants.xlsx')
+  path.join(__dirname, '../../backend/data/participants.xlsx'),
+  path.join(__dirname, '../../../backend/data/participants.xlsx'),
+  path.join(process.cwd(), 'SYNCRYPT ’26 — Registration Form  (Responses) (2).xlsx'),
+  path.join(__dirname, '../SYNCRYPT ’26 — Registration Form  (Responses) (2).xlsx')
 ];
 
 let EXCEL_PATH = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
 
-// Map to store normalized PRN -> Participant details
+// Map to store normalized PRN / email -> Participant details
 let participantMap = new Map();
 
 /**
@@ -46,10 +50,8 @@ export function loadParticipantData() {
     participantMap.clear();
     
     // Re-check path in case of serverless cold start
-    if (!fs.existsSync(EXCEL_PATH)) {
-      const found = possiblePaths.find(p => fs.existsSync(p));
-      if (found) EXCEL_PATH = found;
-    }
+    const found = possiblePaths.find(p => fs.existsSync(p));
+    if (found) EXCEL_PATH = found;
 
     if (!fs.existsSync(EXCEL_PATH)) {
       console.error('[ExcelService] Excel file not found at:', EXCEL_PATH);
@@ -70,17 +72,32 @@ export function loadParticipantData() {
         const name = nameKey && row[nameKey] ? normalizeName(row[nameKey]) : '';
         
         if (normalizedPRN && name) {
-          participantMap.set(normalizedPRN, {
+          const participantObj = {
             prn: normalizedPRN,
             name: name,
             email: row['Email Address'] || row['Official College Email ID'] || '',
             department: row['Department '] || row['Department'] || ''
-          });
+          };
+
+          participantMap.set(normalizedPRN, participantObj);
+          participantMap.set(normalizedPRN.toLowerCase(), participantObj);
+
+          // Support email lookups or PRN with email domain (e.g. 2403120@ritindia.edu)
+          if (participantObj.email) {
+            const cleanEmail = String(participantObj.email).trim().toLowerCase();
+            if (cleanEmail) {
+              participantMap.set(cleanEmail, participantObj);
+              const prefix = cleanEmail.split('@')[0];
+              if (prefix && !participantMap.has(prefix)) {
+                participantMap.set(prefix, participantObj);
+              }
+            }
+          }
         }
       }
     });
 
-    console.log(`[ExcelService] Loaded ${participantMap.size} participants into memory.`);
+    console.log(`[ExcelService] Loaded participant map with ${participantMap.size} keys from ${EXCEL_PATH}.`);
   } catch (error) {
     console.error('[ExcelService] Error loading Excel file:', error);
   }
@@ -90,7 +107,7 @@ export function loadParticipantData() {
 loadParticipantData();
 
 /**
- * Verified lookup function by PRN
+ * Verified lookup function by PRN or Email
  */
 export function getParticipantByPRN(rawPRN) {
   if (participantMap.size === 0) {
@@ -98,5 +115,17 @@ export function getParticipantByPRN(rawPRN) {
   }
   const cleanPRN = normalizePRN(rawPRN);
   if (!cleanPRN) return null;
-  return participantMap.get(cleanPRN) || null;
+
+  // Direct lookup
+  let found = participantMap.get(cleanPRN) || participantMap.get(cleanPRN.toLowerCase());
+  if (found) return found;
+
+  // Fallback: If user entered email or PRN@domain, check prefix
+  if (cleanPRN.includes('@')) {
+    const prefix = cleanPRN.split('@')[0].trim().toLowerCase();
+    found = participantMap.get(prefix);
+    if (found) return found;
+  }
+
+  return null;
 }

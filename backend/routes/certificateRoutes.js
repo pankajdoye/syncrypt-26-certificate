@@ -29,7 +29,7 @@ router.post('/verify', async (req, res) => {
     const participant = getParticipantByPRN(prn);
 
     if (!participant) {
-      return res.status(444).json({ // 404 Not Found
+      return res.status(404).json({ // 404 Not Found
         success: false,
         message: 'The entered PRN is not registered for SYNCRYPT’26. Please check your PRN and try again.'
       });
