@@ -1,0 +1,11 @@
+{
+  "name": "syncrypt26-certificate-download-portal",
+  "version": "1.0.0",
+  "description": "SYNCRYPT’26 Certificate Download Website for CRYPTX SECURITY RIT",
+  "scripts": {
+    "start": "node backend/server.js",
+    "backend": "cd backend && npm start",
+    "frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build"
+  }
+}
