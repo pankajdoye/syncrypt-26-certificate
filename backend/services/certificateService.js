@@ -6,13 +6,22 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const TEMPLATE_IMAGE_PATH = path.join(__dirname, '../certificate/certificate-template.png');
+const possibleImagePaths = [
+  path.join(process.cwd(), 'backend/certificate/certificate-template.png'),
+  path.join(__dirname, '../certificate/certificate-template.png'),
+  path.join(__dirname, '../../backend/certificate/certificate-template.png')
+];
 
 /**
- * Generates dynamic certificate PDF for participant using the new SYNCRYPT'26 certificate template.
- * Participant name is placed immediately after 'Mr./Ms.' with a small 1-2 space gap in GOLD (#D4AF37).
+ * Generates dynamic certificate PDF for participant using the SYNCRYPT'26 certificate template.
  */
 export async function generateCertificatePDF(participantName) {
+  const templatePath = possibleImagePaths.find(p => fs.existsSync(p)) || possibleImagePaths[0];
+
+  if (!fs.existsSync(templatePath)) {
+    throw new Error(`Certificate template image not found at ${templatePath}`);
+  }
+
   // Create a new PDF document
   const pdfDoc = await PDFDocument.create();
   
@@ -21,8 +30,8 @@ export async function generateCertificatePDF(participantName) {
   const pageHeight = 595.92;
   const page = pdfDoc.addPage([pageWidth, pageHeight]);
 
-  // Read and embed new high-res certificate background PNG template
-  const imageBytes = fs.readFileSync(TEMPLATE_IMAGE_PATH);
+  // Read and embed high-res certificate background PNG template
+  const imageBytes = fs.readFileSync(templatePath);
   const embeddedImage = await pdfDoc.embedPng(imageBytes);
 
   // Draw background template image filling the A4 landscape page
@@ -40,11 +49,7 @@ export async function generateCertificatePDF(participantName) {
   // 'Mr./Ms.' text ends at ~260pt from left on A4 canvas.
   // A natural 1-2 space gap places the participant name starting at X = 268pt.
   const startX = 268;
-  
-  // Baseline Y is ~240pt from the bottom of the page
   const baselineY = 240;
-
-  // Max available width on line before end of line (~638pt)
   const maxAvailableWidth = 370;
 
   // Dynamic font scaling for long names

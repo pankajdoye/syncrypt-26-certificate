@@ -1,11 +1,19 @@
 import xlsx from 'xlsx';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const EXCEL_PATH = path.join(__dirname, '../data/participants.xlsx');
+// Robust path resolution for local dev & Vercel serverless function execution
+const possiblePaths = [
+  path.join(process.cwd(), 'backend/data/participants.xlsx'),
+  path.join(__dirname, '../data/participants.xlsx'),
+  path.join(__dirname, '../../backend/data/participants.xlsx')
+];
+
+let EXCEL_PATH = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
 
 // Map to store normalized PRN -> Participant details
 let participantMap = new Map();
@@ -16,7 +24,6 @@ let participantMap = new Map();
 export function normalizePRN(rawPRN) {
   if (rawPRN === undefined || rawPRN === null) return '';
   let str = String(rawPRN).trim();
-  // Handle float strings like '2560005.0'
   if (str.endsWith('.0')) {
     str = str.slice(0, -2);
   }
@@ -37,13 +44,24 @@ export function normalizeName(rawName) {
 export function loadParticipantData() {
   try {
     participantMap.clear();
+    
+    // Re-check path in case of serverless cold start
+    if (!fs.existsSync(EXCEL_PATH)) {
+      const found = possiblePaths.find(p => fs.existsSync(p));
+      if (found) EXCEL_PATH = found;
+    }
+
+    if (!fs.existsSync(EXCEL_PATH)) {
+      console.error('[ExcelService] Excel file not found at:', EXCEL_PATH);
+      return;
+    }
+
     const workbook = xlsx.readFile(EXCEL_PATH);
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     const rows = xlsx.utils.sheet_to_json(sheet);
 
     rows.forEach(row => {
-      // Find key for PRN and Name flexibly
       const prnKey = Object.keys(row).find(k => /prn|roll/i.test(k));
       const nameKey = Object.keys(row).find(k => /full\s*name|name/i.test(k));
 
@@ -75,6 +93,9 @@ loadParticipantData();
  * Verified lookup function by PRN
  */
 export function getParticipantByPRN(rawPRN) {
+  if (participantMap.size === 0) {
+    loadParticipantData();
+  }
   const cleanPRN = normalizePRN(rawPRN);
   if (!cleanPRN) return null;
   return participantMap.get(cleanPRN) || null;

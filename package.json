@@ -2,10 +2,19 @@
   "name": "syncrypt26-certificate-download-portal",
   "version": "1.0.0",
   "description": "SYNCRYPT’26 Certificate Download Website for CRYPTX SECURITY RIT",
+  "type": "module",
   "scripts": {
     "start": "node backend/server.js",
     "backend": "cd backend && npm start",
     "frontend": "cd frontend && npm run dev",
     "build": "cd frontend && npm run build"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.3.1",
+    "pdf-lib": "^1.17.1",
+    "xlsx": "^0.18.5"
   }
 }
