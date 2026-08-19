@@ -29,7 +29,7 @@ const possibleExcelPaths = [
 let participantMap = new Map();
 
 /**
- * Normalizes PRN inputs by stripping spaces and removing trailing '.0' if parsed as floats
+ * Normalizes PRN inputs by stripping spaces, trailing '.0', and optional 'prn'/'roll' prefixes
  */
 export function normalizePRN(rawPRN) {
   if (rawPRN === undefined || rawPRN === null) return '';
@@ -37,7 +37,9 @@ export function normalizePRN(rawPRN) {
   if (str.endsWith('.0')) {
     str = str.slice(0, -2);
   }
-  return str;
+  // Strip optional 'prn' or 'roll' or 'roll no' prefix (case insensitive)
+  str = str.replace(/^(prn|roll\s*no\.?|roll\s*number|roll)\s*[:#-]?\s*/i, '');
+  return str.trim();
 }
 
 /**
@@ -101,6 +103,7 @@ export function loadParticipantData() {
             department: row['Department '] || row['Department'] || ''
           };
 
+          // Primary PRN lookups
           participantMap.set(normalizedPRN, participantObj);
           participantMap.set(normalizedPRN.toLowerCase(), participantObj);
 
@@ -121,6 +124,11 @@ export function loadParticipantData() {
               }
             }
           }
+
+          // Support Name lookups (full name & spaceless full name)
+          const nameLower = name.toLowerCase();
+          participantMap.set(nameLower, participantObj);
+          participantMap.set(nameLower.replace(/\s+/g, ''), participantObj);
         }
       }
     });
@@ -135,7 +143,7 @@ export function loadParticipantData() {
 loadParticipantData();
 
 /**
- * Verified lookup function by PRN or Email
+ * Verified lookup function by PRN, Email, or Name
  */
 export function getParticipantByPRN(rawPRN) {
   if (participantMap.size === 0) {
@@ -146,6 +154,11 @@ export function getParticipantByPRN(rawPRN) {
 
   // Direct lookup
   let found = participantMap.get(cleanPRN) || participantMap.get(cleanPRN.toLowerCase());
+  if (found) return found;
+
+  // Try spaceless lowercase (e.g. for full names entered into PRN input)
+  const lowerSpaceless = cleanPRN.toLowerCase().replace(/\s+/g, '');
+  found = participantMap.get(lowerSpaceless);
   if (found) return found;
 
   // Try without leading zeros

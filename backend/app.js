@@ -37,8 +37,11 @@ const apiLimiter = rateLimit({
 // Serve assets (e.g. logo)
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
-// Apply rate limiting to certificate API
+// Apply rate limiting to certificate API on multiple route variations for Vercel
 app.use('/api/certificate', apiLimiter, certificateRoutes);
+app.use('/certificate', apiLimiter, certificateRoutes);
+app.use('/api', apiLimiter, certificateRoutes);
+app.use('/', apiLimiter, certificateRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
