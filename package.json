@@ -7,14 +7,19 @@
     "start": "node backend/server.js",
     "backend": "cd backend && npm start",
     "frontend": "cd frontend && npm run dev",
-    "build": "cd frontend && npm install && npm run build"
+    "build": "cd frontend && npm install --include=dev && npm run build"
   },
   "dependencies": {
+    "@vitejs/plugin-react": "^4.3.0",
+    "autoprefixer": "^10.4.19",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-rate-limit": "^7.3.1",
     "pdf-lib": "^1.17.1",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.3",
+    "vite": "^5.2.11",
     "xlsx": "^0.18.5"
   }
 }
