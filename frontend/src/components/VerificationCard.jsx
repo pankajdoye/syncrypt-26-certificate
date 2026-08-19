@@ -122,35 +122,6 @@ export default function VerificationCard({ onVerify, onDownload, loading, downlo
               </div>
             </div>
 
-            {/* Visual Certificate Preview Card */}
-            <div className="space-y-2 text-left">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-500 px-1">
-                <span>Official Certificate Preview</span>
-                <span className="text-emerald-600 font-mono">SYNCRYPT’26</span>
-              </div>
-              
-              <div className="relative w-full rounded-xl overflow-hidden shadow-md border border-slate-300 bg-slate-900 group">
-                <img
-                  src="/certificate-template.png"
-                  alt="SYNCRYPT'26 New Certificate Template Preview"
-                  className="w-full h-auto block select-none object-cover"
-                />
-                {/* Dynamic Name Overlay onto Preview */}
-                <div 
-                  className="absolute pointer-events-none text-left truncate font-bold text-[#D4AF37] font-sans drop-shadow-sm"
-                  style={{
-                    left: '31.8%',
-                    top: '57.8%',
-                    maxWidth: '43%',
-                    fontSize: result.name.length > 25 ? 'clamp(7px, 1.8vw, 13px)' : 'clamp(9px, 2.2vw, 16px)',
-                    lineHeight: '1',
-                  }}
-                >
-                  {result.name}
-                </div>
-              </div>
-            </div>
-
             <p className="text-xs font-medium text-slate-600">
               Your official SYNCRYPT’26 participation certificate is ready for download.
             </p>
