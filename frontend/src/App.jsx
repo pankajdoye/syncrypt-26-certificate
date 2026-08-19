@@ -5,6 +5,9 @@ import VerificationCard from './components/VerificationCard.jsx';
 import CyberBackground from './components/CyberBackground.jsx';
 import Footer from './components/Footer.jsx';
 
+// Base API URL: Uses VITE_API_URL if configured (e.g. Render backend URL), or relative path /api
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
 export default function App() {
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -18,7 +21,7 @@ export default function App() {
     setResult(null);
 
     try {
-      const response = await fetch('/api/certificate/verify', {
+      const response = await fetch(`${API_BASE}/api/certificate/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -59,7 +62,7 @@ export default function App() {
     setDownloading(true);
 
     try {
-      const response = await fetch('/api/certificate/download', {
+      const response = await fetch(`${API_BASE}/api/certificate/download`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,7 +74,6 @@ export default function App() {
         throw new Error('Failed to generate PDF');
       }
 
-      // Extract filename from header if available, or generate fallback
       const contentDisposition = response.headers.get('Content-Disposition');
       let filename = `SYNCRYPT_26_Certificate_${prn}.pdf`;
       
