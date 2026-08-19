@@ -13,7 +13,7 @@ const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
  * Generate certificate PDF on client side using current dashboard template (/certificate-template.png)
  */
 async function generateClientCertificatePDF(participantName) {
-  const imgResponse = await fetch('/certificate-template.png');
+  const imgResponse = await fetch(`/certificate-template.png?v=${Date.now()}`, { cache: 'no-store' });
   if (!imgResponse.ok) {
     throw new Error('Failed to load certificate template image');
   }
