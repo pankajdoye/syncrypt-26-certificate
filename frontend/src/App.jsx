@@ -115,43 +115,13 @@ export default function App() {
     setDownloading(true);
 
     const nameToUse = participantName || result?.name || 'Participant';
-    let pdfBlob = null;
-    let filename = `SYNCRYPT_26_Certificate_${nameToUse.trim().replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+    const safeName = nameToUse.trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filename = `SYNCRYPT_26_Certificate_${safeName}.pdf`;
 
     try {
-      const response = await fetch(`${API_BASE}/api/certificate/download`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prn }),
-      });
+      // 1. Generate high-res PDF directly from updated template (/certificate-template.png) in browser
+      const pdfBlob = await generateClientCertificatePDF(nameToUse);
 
-      if (response.ok) {
-        const contentDisposition = response.headers.get('Content-Disposition');
-        if (contentDisposition) {
-          const match = contentDisposition.match(/filename="?([^"]+)"?/);
-          if (match && match[1]) {
-            filename = match[1];
-          }
-        }
-        pdfBlob = await response.blob();
-      } else {
-        throw new Error(`Server returned status ${response.status}`);
-      }
-    } catch (apiError) {
-      console.warn('Backend download call failed or returned error, using client PDF generator:', apiError);
-      try {
-        pdfBlob = await generateClientCertificatePDF(nameToUse);
-      } catch (clientError) {
-        console.error('Client PDF generation error:', clientError);
-        alert('Failed to generate certificate PDF. Please try again.');
-        setDownloading(false);
-        return;
-      }
-    }
-
-    if (pdfBlob) {
       const url = window.URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
       a.href = url;
@@ -160,8 +130,35 @@ export default function App() {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
+    } catch (clientError) {
+      console.warn('Client-side PDF generation error, trying backend API:', clientError);
+      try {
+        const response = await fetch(`${API_BASE}/api/certificate/download`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prn }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Server returned status ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (backendError) {
+        console.error('Backend PDF download error:', backendError);
+        alert('Failed to generate certificate PDF. Please try again.');
+      }
+    } finally {
+      setDownloading(false);
     }
-    setDownloading(false);
   };
 
   const handleReset = () => {
